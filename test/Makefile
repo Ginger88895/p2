@@ -16,6 +16,8 @@ CPPFLAGS =
 CFLAGS = -O2 -B$(GCCDIR) -G 0 -Wa,-mips1 -nostdlib -ffreestanding
 LDFLAGS = -s -T script -N -warn-common -warn-constructors -warn-multiple-gp
 
+PATH=$(ARCHDIR)
+
 CC = $(GCCDIR)gcc
 AS = $(GCCDIR)as
 LD = $(GCCDIR)ld
@@ -30,7 +32,8 @@ STDLIB_O = start.o stdio.o stdlib.o
 LIB = assert atoi printf readline stdio strncmp strcat strcmp strcpy strlen memcpy memset
 NLIB = libnachos.a
 
-TARGETS = halt sh matmult sort echo cat cp mv rm #chat chatserver
+#TARGETS = halt sh matmult sort echo cat cp mv rm #chat chatserver
+TARGETS = mytest1
 
 .SECONDARY: $(patsubst %.c,%.o,$(wildcard *.c))
 
@@ -39,10 +42,10 @@ all: $(patsubst %,%.coff,$(TARGETS))
 ag: grade-file.coff grade-exec.coff grade-mini.coff grade-dumb.coff
 
 clean:
-	rm -f strt.s *.o *.coff $(NLIB)
+	/bin/rm -f strt.s *.o *.coff $(NLIB)
 
 agclean: clean
-	rm -f f1-* f2-*
+	/bin/rm -f f1-* f2-*
 
 $(NLIB): $(patsubst %,$(NLIB)(%.o),$(LIB)) start.o
 	$(RANLIB) $(NLIB)
@@ -50,7 +53,7 @@ $(NLIB): $(patsubst %,$(NLIB)(%.o),$(LIB)) start.o
 start.o: start.s syscall.h
 	$(CPP) $(CPPFLAGS) start.s > strt.s
 	$(AS) $(ASFLAGS) -o start.o strt.s
-	rm strt.s
+	/bin/rm strt.s
 
 %.o: %.c *.h
 	$(CC) $(CFLAGS) -c $<

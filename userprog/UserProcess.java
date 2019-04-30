@@ -53,6 +53,11 @@ public class UserProcess {
 	    return false;
 	
 	new UThread(this).setName(name).fork();
+	descs=new OpenFile[16];
+	descs[0]=UserKernel.console.openForReading();
+	descs[1]=UserKernel.console.openForWriting();
+	for(int i=2;i<16;i++)
+		descs[i]=null;
 
 	return true;
     }
@@ -387,17 +392,91 @@ public class UserProcess {
      * @param	a3	the fourth syscall argument.
      * @return	the value to be returned to the user.
      */
-    public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
-	switch (syscall) {
-	case syscallHalt:
-	    return handleHalt();
+    public int handleSyscall(int syscall, int a0, int a1, int a2, int a3)
+	{
+		System.out.println("System Call: "+syscall);
+		String fn;
+		byte[] buf;
+		int len;
+		switch (syscall)
+		{
+			case syscallHalt:
+				return handleHalt();
 
+			case syscallCreate:
+				fn=readVirtualMemoryString(a0,256);
+				if(fn!=null)
+				{
+					//System.out.println("I am going to create a file name "+fn);
+					OpenFile tf=ThreadedKernel.fileSystem.open(fn,true);
+					if(tf==null)
+						return -1;
+					for(int i=2;i<16;i++)
+						if(descs[i]==null)
+						{
+							descs[i]=tf;
+							return i;
+						}
+					return -1;
+				}
+				System.out.println("Bloody hell");
+				return -1;
 
-	default:
-	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
-	    Lib.assertNotReached("Unknown system call!");
-	}
-	return 0;
+			case syscallOpen:
+				fn=readVirtualMemoryString(a0,256);
+				if(fn!=null)
+				{
+					//System.out.println("I am going to open a file name "+fn);
+					OpenFile tf=ThreadedKernel.fileSystem.open(fn,false);
+					if(tf==null)
+						return -1;
+					for(int i=2;i<16;i++)
+						if(descs[i]==null)
+						{
+							descs[i]=tf;
+							return i;
+						}
+					return -1;
+				}
+				System.out.println("Bloody hell");
+				return -1;
+
+			case syscallRead:
+				if(descs[a0]==null)
+					return -1;
+				buf=new byte[a2];
+				len=descs[a0].read(buf,0,a2);
+				if(len<0)
+					return -1;
+				return writeVirtualMemory(a1,buf,0,len);
+
+			case syscallWrite:
+				if(descs[a0]==null)
+					return -1;
+				buf=new byte[a2];
+				len=readVirtualMemory(a1,buf,0,a2);
+				return descs[a0].write(buf,0,len);
+
+			case syscallClose:
+				if(descs[a0]!=null)
+					descs[a0].close();
+				descs[a0]=null;
+				return 0;
+
+			case syscallUnlink:
+				fn=readVirtualMemoryString(a0,256);
+				if(fn!=null)
+				{
+					ThreadedKernel.fileSystem.remove(fn);
+					return 0;
+				}
+				return -1;
+
+			default:
+				Lib.debug(dbgProcess, "Unknown syscall " + syscall);
+				Lib.assertNotReached("Unknown system call!");
+		}
+		return 0;
     }
 
     /**
@@ -446,4 +525,5 @@ public class UserProcess {
 	
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
+	private OpenFile descs[];
 }
