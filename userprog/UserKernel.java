@@ -4,6 +4,8 @@ import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 
+import java.util.LinkedList;
+
 /**
  * A kernel that can support multiple user processes.
  */
@@ -19,14 +21,27 @@ public class UserKernel extends ThreadedKernel {
      * Initialize this kernel. Creates a synchronized console and sets the
      * processor's exception handler.
      */
-    public void initialize(String[] args) {
-	super.initialize(args);
+    public void initialize(String[] args)
+	{
+		super.initialize(args);
 
-	console = new SynchConsole(Machine.console());
-	
-	Machine.processor().setExceptionHandler(new Runnable() {
-		public void run() { exceptionHandler(); }
-	    });
+		console = new SynchConsole(Machine.console());
+		
+		Machine.processor().setExceptionHandler(new Runnable() {
+			public void run() { exceptionHandler(); }
+			});
+
+		//Initialize free page list
+		
+		fp_lock=new Semaphore(1);
+		fp_lock.P();
+		free_pages=new LinkedList<Integer>();
+		int num_phys_pages=Machine.processor().getNumPhysPages();
+		for(int i=0;i<num_phys_pages;i++)
+			free_pages.add(i);
+		for(Integer x:free_pages)
+			System.out.println(x);
+		fp_lock.V();
     }
 
     /**
@@ -89,15 +104,13 @@ public class UserKernel extends ThreadedKernel {
      *
      * @see	nachos.machine.Machine#getShellProgramName
      */
-    public void run() {
-	super.run();
+    public void run()
+	{
+		super.run();
 
-	UserProcess process = UserProcess.newUserProcess();
-	
-	String shellProgram = Machine.getShellProgramName();	
-	Lib.assertTrue(process.execute(shellProgram, new String[] { }));
-
-	KThread.currentThread().finish();
+		UserProcess process = UserProcess.newUserProcess();
+		String shellProgram = Machine.getShellProgramName();	
+		Lib.assertTrue(process.execute(shellProgram, new String[] { }));
     }
 
     /**
@@ -109,6 +122,8 @@ public class UserKernel extends ThreadedKernel {
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
+	public static LinkedList<Integer> free_pages;
+	public static Semaphore fp_lock;
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
