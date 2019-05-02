@@ -599,7 +599,7 @@ public class UserProcess {
 				fn=readVirtualMemoryString(a0,256);
 				if(fn!=null)
 				{
-					System.out.println("I am going to open a file name "+fn);
+					//System.out.println("I am going to open a file name "+fn);
 					OpenFile tf=ThreadedKernel.fileSystem.open(fn,false);
 					if(tf==null)
 						return -1;
