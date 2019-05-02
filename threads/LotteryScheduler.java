@@ -124,17 +124,17 @@ public class LotteryScheduler extends PriorityScheduler {
 
 	protected void add_upstream(KThread x,KThread y)
 	{
+		update(y,thread_effective_tickets.get(x));
 		if(!upstream.get(x).containsKey(y))
 			upstream.get(x).put(y,1);
 		else
 			upstream.get(x).put(y,upstream.get(x).get(y)+1);
-		update(y,thread_effective_tickets.get(x));
 	}
 
 	protected void remove_upstream(KThread x,KThread y)
 	{
-		upstream.get(x).put(y,upstream.get(x).get(y)-1);
 		update(y,-thread_effective_tickets.get(x));
+		upstream.get(x).put(y,upstream.get(x).get(y)-1);
 	}
 
 	protected class lottery_queue extends ThreadQueue
