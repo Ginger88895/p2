@@ -161,6 +161,8 @@ void runline(char* line) {
 	else {
 	    strcpy(prog, argv[0]);
 	    strcat(prog, ".coff");
+		
+		printf("%d\n",*((int*)14136));
 
 	    pid = exec(prog, argc, argv);
 	    if (pid == -1) {

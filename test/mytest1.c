@@ -2,14 +2,23 @@
 #include "stdio.h"
 
 char buf[100];
+char* tt[]={"hello!","welcome!"};
 int main()
 {
+	printf("pid=%d\n",exec("mytest2a.coff",0,0));
+	printf("pid=%d\n",exec("mytest2b.coff",0,0));
+	printf("pid=%d\n",exec("mytest2d.coff",2,tt));
+	//exec("mytest2c.coff",0,0);
+	while(1);
+	return 0;
+	/*
 	int ff=creat("data");
 	close(ff);
 	write(1,"10 200\n",strlen("10 200\n"));
 	printf("%d\n",write(ff,"10 200\n",10));
 	halt();
 	return 0;
+	*/
 
 	/*
 	int a=0,b=0,i=0;
@@ -33,7 +42,7 @@ int main()
 	}
 	printf("%d+%d=%d\n",a,b,a+b);
 	halt();
-	*/
 	return 0;
+	*/
 }
 

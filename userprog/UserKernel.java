@@ -5,6 +5,8 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.util.LinkedList;
+import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * A kernel that can support multiple user processes.
@@ -39,9 +41,17 @@ public class UserKernel extends ThreadedKernel {
 		int num_phys_pages=Machine.processor().getNumPhysPages();
 		for(int i=0;i<num_phys_pages;i++)
 			free_pages.add(i);
-		for(Integer x:free_pages)
-			System.out.println(x);
 		fp_lock.V();
+		
+		process_lock=new Semaphore(1);
+		process_lock.P();
+		process_table=new HashMap<Integer,UserProcess>();
+		process_return=new HashMap<Integer,Integer>();
+		process_tree=new HashMap<Integer,HashSet<Integer>>();
+		process_fin=new HashMap<Integer,Integer>();
+		process_free_pid=new LinkedList<Integer>();
+		process_pool_size=0;
+		process_lock.V();
     }
 
     /**
@@ -111,6 +121,8 @@ public class UserKernel extends ThreadedKernel {
 		UserProcess process = UserProcess.newUserProcess();
 		String shellProgram = Machine.getShellProgramName();	
 		Lib.assertTrue(process.execute(shellProgram, new String[] { }));
+
+		KThread.currentThread().finish();
     }
 
     /**
@@ -124,6 +136,14 @@ public class UserKernel extends ThreadedKernel {
     public static SynchConsole console;
 	public static LinkedList<Integer> free_pages;
 	public static Semaphore fp_lock;
+
+	public static HashMap<Integer,UserProcess> process_table;
+	public static HashMap<Integer,HashSet<Integer>> process_tree;
+	public static HashMap<Integer,Integer> process_return;
+	public static HashMap<Integer,Integer> process_fin;
+	public static LinkedList<Integer> process_free_pid;
+	public static Semaphore process_lock;
+	public static int process_pool_size;
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
