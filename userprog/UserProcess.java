@@ -158,12 +158,8 @@ public class UserProcess {
      */
     public int readVirtualMemory(int vaddr, byte[] data, int offset, int length)
 	{
-		//TODO: Boundary checks
-		//Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
-
 		byte[] memory = Machine.processor().getMemory();
-		
-		// for now, just assume that virtual addresses equal physical addresses
+
 		int vpn=vaddr/pageSize;
 		if(vaddr<0||vpn>=numPages)
 			return 0;
@@ -176,7 +172,6 @@ public class UserProcess {
 			if(amount<=0)
 				break;
 			System.arraycopy(memory,pageTable[i].ppn*pageSize+ppn_offs,data,offset,amount);
-			//System.arraycopy(data,offset,memory,vaddr,amount);
 			offset+=amount;
 			vaddr+=amount;
 			length-=amount;
@@ -214,16 +209,8 @@ public class UserProcess {
      */
     public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length)
 	{
-		//TODO: Boundary checks
-		//Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
-
 		byte[] memory = Machine.processor().getMemory();
 		
-		// for now, just assume that virtual addresses equal physical addresses
-		/*
-		if (vaddr < 0 || vaddr >= memory.length)
-			return 0;
-		*/
 		int vpn=vaddr/pageSize;
 		if(vaddr<0||vpn>=numPages)
 			return 0;
@@ -463,6 +450,13 @@ public class UserProcess {
 		return 0;
 	}
 
+	private byte[] bytearray_create_safe(int size)
+	{
+		if(size<0||size>numPages*pageSize)
+			return null;
+		return new byte[size];
+	}
+
     /**
      * Handle a syscall exception. Called by <tt>handleException()</tt>. The
      * <i>syscall</i> argument identifies which syscall the user executed:
@@ -493,8 +487,6 @@ public class UserProcess {
      */
     public int handleSyscall(int syscall, int a0, int a1, int a2, int a3)
 	{
-		//TODO: Bullet-proof?
-		//System.out.println("System Call: "+syscall);
 		String fn;
 		String[] argz;
 		byte[] buf;
@@ -513,9 +505,11 @@ public class UserProcess {
 				fn=readVirtualMemoryString(a0,256);
 				if(fn!=null&&fn.lastIndexOf('.')!=-1&&fn.substring(fn.lastIndexOf('.')).equals(".coff"))
 				{
-					buf=new byte[8*a1];
+					buf=bytearray_create_safe(4*a1);
+					if(buf==null)
+						return -1;
 					argz=new String[a1];
-					readVirtualMemory(a2,buf,0,8*a1);
+					readVirtualMemory(a2,buf,0,4*a1);
 					tmp=0;
 					for(int i=0;i<4*a1;i++)
 					{
@@ -523,6 +517,8 @@ public class UserProcess {
 						if(i%4==3)
 						{
 							argz[i/4]=readVirtualMemoryString(tmp,256);
+							if(argz[i/4]==null)
+								argz[i/4]=new String();
 							tmp=0;
 						}
 					}
@@ -537,7 +533,6 @@ public class UserProcess {
 					}
 					return -1;
 				}
-				System.out.println("Bloody hell");
 				return -1;
 
 			case syscallJoin:
@@ -550,7 +545,6 @@ public class UserProcess {
 				tmp=UserKernel.process_fin.get(a0);
 				if(tmp==1)
 				{
-					//Already finished
 					val=UserKernel.process_return.get(a0);
 					UserKernel.process_lock.V();
 				}
@@ -580,11 +574,10 @@ public class UserProcess {
 				fn=readVirtualMemoryString(a0,256);
 				if(fn!=null)
 				{
-					//System.out.println("I am going to create a file name "+fn);
 					OpenFile tf=ThreadedKernel.fileSystem.open(fn,true);
 					if(tf==null)
 						return -1;
-					for(int i=2;i<16;i++)
+					for(int i=0;i<16;i++)
 						if(descs[i]==null)
 						{
 							descs[i]=tf;
@@ -592,14 +585,12 @@ public class UserProcess {
 						}
 					return -1;
 				}
-				System.out.println("Bloody hell");
 				return -1;
 
 			case syscallOpen:
 				fn=readVirtualMemoryString(a0,256);
 				if(fn!=null)
 				{
-					//System.out.println("I am going to open a file name "+fn);
 					OpenFile tf=ThreadedKernel.fileSystem.open(fn,false);
 					if(tf==null)
 						return -1;
@@ -611,28 +602,35 @@ public class UserProcess {
 						}
 					return -1;
 				}
-				System.out.println("Bloody hell");
 				return -1;
 
 			case syscallRead:
+				if(a0<0||a0>=16)
+					return -1;
 				if(descs[a0]==null)
 					return -1;
-				buf=new byte[a2];
+				buf=bytearray_create_safe(a2);
+				if(buf==null)
+					return -1;
 				len=descs[a0].read(buf,0,a2);
 				if(len<0)
 					return -1;
 				return writeVirtualMemory(a1,buf,0,len);
 
 			case syscallWrite:
+				if(a0<0||a0>=16)
+					return -1;
 				if(descs[a0]==null)
 					return -1;
-				buf=new byte[a2];
+				buf=bytearray_create_safe(a2);
+				if(buf==null)
+					return -1;
 				len=readVirtualMemory(a1,buf,0,a2);
-				//return descs[a0].write(buf,0,len);
-				len=descs[a0].write(buf,0,len);
-				return len;
+				return descs[a0].write(buf,0,len);
 
 			case syscallClose:
+				if(a0<0||a0>=16)
+					return -1;
 				if(descs[a0]!=null)
 					descs[a0].close();
 				descs[a0]=null;
